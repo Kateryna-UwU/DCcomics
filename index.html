@@ -419,11 +419,15 @@ async function renderFeed(){
       .concat([...tags].slice(0,6).map(x=>`<button class="chip" data-fill="${x}">${x}</button>`))
       .join("");
     suggestEl.innerHTML = chips;
-    $$("#suggest .chip").forEach(b=> b.onclick = ()=>{ searchEl.value=b.dataset.fill.replace(/^#/,""); renderFiltered(list, searchEl.value); });
+    $$("#suggest .chip").forEach(b=> b.onclick = ()=>{
+      searchEl.value = b.dataset.fill.replace(/^#/,""); // убираем решётку у #tag
+      renderFiltered(list, searchEl.value);
+    });
   }
 
   function renderFiltered(items, q){
-    q = (q||"").trim().toLowerCase();
+    // убираем ведущую # и пробелы
+    q = (q||"").replace(/^#/, "").trim().toLowerCase();
     makeSuggestions(q);
     const filtered = items.filter(c=>{
       const base = `${c.title||""} ${c.series?.title||""} ${(c.tags||[]).join(" ")} ${c.year||""}`.toLowerCase();
