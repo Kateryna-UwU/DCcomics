@@ -501,13 +501,19 @@ async function renderTags(){
   const active = new Set();
 
   function renderByTags(){
-    const selected = [...active];
-    const filtered = selected.length ? feed.filter(c=> selected.every(t=> (c.tags||[]).includes(t))) : feed;
+    const selected = [...active].map(s=>s.toLowerCase());
+    const filtered = selected.length
+      ? feed.filter(c=>{
+          const ct = (c.tags||[]).map(x=>x.toLowerCase());
+          return selected.every(t=> ct.includes(t));
+        })
+      : feed;
+
     const out = filtered.map(c=>{
       const cover = c.images?.[0] || "";
       return `
       <div class="card row" onclick="openChapter(${c.id})">
-        ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(cover)}">` : `<div class="thumb"></div>`}
+        ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(cover)}" alt="">` : `<div class="thumb"></div>`}
         <div style="flex:1">
           <div><strong>#${fmt(c.issue_num)} — ${c.title||"—"}</strong></div>
           <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
