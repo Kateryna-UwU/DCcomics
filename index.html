@@ -320,18 +320,22 @@ function toast(message, onUndo){
 }
 
 /*** ====== AUTH ====== ***/
+
+const OWNER_UID = "1c11591d-a27c-4023-adec-f1aeeace822c";
+
 async function refreshAuth(){
   const { data:{ user } } = await supabase.auth.getUser();
   state.user = user;
+
   $("#auth-status").textContent = user ? (user.email || "user") : "guest";
   show($("#btn-login"), !user);
   show($("#btn-logout"), !!user);
   show($("#fab"), !!user);
-  if(user){
-    const { data } = await supabase.from("members").select("user_id").eq("user_id", user.id);
-    state.isMember = !!data && data.length>0;
-  } else state.isMember=false;
+
+  // Разрешаем редактирование только твоему UID
+  state.isMember = !!user && user.id === OWNER_UID;
 }
+
 function openAuth(){ const m=$("#auth-modal"); m.style.display="flex"; m.setAttribute("aria-hidden","false"); }
 function closeAuth(){ const m=$("#auth-modal"); m.style.display="none"; m.setAttribute("aria-hidden","true"); }
 
@@ -349,8 +353,18 @@ $("#btn-logout").onclick = async ()=>{ await supabase.auth.signOut(); await refr
 
 /* ⋯ menu toggle + outside click */
 const menu = $("#menu");
-$("#menu-btn").onclick = (e)=>{ e.stopPropagation(); menu.classList.toggle("open"); $("#menu-dd").setAttribute("aria-hidden", !menu.classList.contains("open")); };
-document.addEventListener("click", (e)=>{ if(!menu.contains(e.target)) { menu.classList.remove("open"); $("#menu-dd").setAttribute("aria-hidden","true"); }});
+$("#menu-btn").onclick = (e)=>{
+  e.stopPropagation();
+  menu.classList.toggle("open");
+  $("#menu-dd").setAttribute("aria-hidden", !menu.classList.contains("open"));
+};
+document.addEventListener("click", (e)=>{
+  if(!menu.contains(e.target)) {
+    menu.classList.remove("open");
+    $("#menu-dd").setAttribute("aria-hidden","true");
+  }
+});
+ }});
 
 /*** ====== ROUTER ====== ***/
 window.addEventListener("hashchange", ()=> routeTo(location.hash || "#/feed"));
