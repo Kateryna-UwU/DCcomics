@@ -398,63 +398,63 @@ async function renderFeed(){
   show($("#view-feed"), true);
   html($("#feed"), `<div class="card">Loading…</div>`);
 
-  const list = await getFeed();
-  const searchEl = $("#search");
-  const suggestEl = $("#suggest");
-  $("#btn-clear").onclick = ()=>{ searchEl.value=""; renderFiltered(list,""); };
+  const qEl = $("#q");
+  $("#btn-clear").onclick = ()=>{ qEl.value=""; renderFeed(); };
 
-  function makeSuggestions(q){
-    const s = q.trim().toLowerCase();
-    if(!s){ suggestEl.innerHTML=""; return; }
-    const years = new Set(), titles = new Set(), tags = new Set();
-    for(const c of list){
-      if(String(c.year||"").startsWith(s)) years.add(String(c.year));
-      if((c.title||"").toLowerCase().startsWith(s)) titles.add(c.title);
-      if((c.series?.title||"").toLowerCase().startsWith(s)) titles.add(c.series.title);
-      for(const t of (c.tags||[])) if(t.toLowerCase().startsWith(s)) tags.add("#"+t);
-      if(years.size>5 && titles.size>5 && tags.size>5) break;
-    }
-    const chips = [...years].slice(0,6).map(x=>`<button class="chip" data-fill="${x}">${x}</button>`)
-      .concat([...titles].slice(0,6).map(x=>`<button class="chip" data-fill="${x}">${x}</button>`))
-      .concat([...tags].slice(0,6).map(x=>`<button class="chip" data-fill="${x}">${x}</button>`))
-      .join("");
-    suggestEl.innerHTML = chips;
-    $$("#suggest .chip").forEach(b=> b.onclick = ()=>{
-      searchEl.value = b.dataset.fill.replace(/^#/,""); // убираем решётку у #tag
-      renderFiltered(list, searchEl.value);
-    });
+  const list = await getFeed();
+
+  // нормализация запроса
+  let qraw = (qEl.value || "").trim().toLowerCase();
+  // если пользователь ввёл #80 → ищем по номеру
+  let issueQuery = null;
+  if (qraw.startsWith("#")) {
+    issueQuery = qraw.slice(1).replace(/\D/g, ""); // только цифры
+  }
+  // уберём # у тегов (#tim → tim)
+  const q = qraw.replace(/^#/, "");
+
+  const filtered = list.filter(c=>{
+    // строка поиска по всем полям
+    const hay = [
+      c.title || "",
+      c.series?.title || "",
+      (c.tags || []).join(" "),
+      String(c.year || ""),
+      String(c.issue_num || "")
+    ].join(" ").toLowerCase();
+
+    // если ввели #число — проверяем номер выпуска
+    if (issueQuery && String(c.issue_num || "").startsWith(issueQuery)) return true;
+
+    // обычный поиск (включая Cass → найдёт "cass")
+    return !q || hay.includes(q);
+  });
+
+  if(!filtered.length){
+    html($("#feed"), `<div class="card">No results</div>`);
+    return;
   }
 
-  function renderFiltered(items, q){
-    // убираем ведущую # и пробелы
-    q = (q||"").replace(/^#/, "").trim().toLowerCase();
-    makeSuggestions(q);
-    const filtered = items.filter(c=>{
-      const base = `${c.title||""} ${c.series?.title||""} ${(c.tags||[]).join(" ")} ${c.year||""}`.toLowerCase();
-      return !q || base.includes(q);
-    });
-    if(filtered.length===0){ html($("#feed"), `<div class="card">No results</div>`); return; }
-
-    const out = filtered.map(c=>{
-      const cover = c.images?.[0] || "";
-      const summary = c.summary ? escapeHtml(c.summary) : "";
-      return `
+  const out = filtered.map(c=>{
+    const cover = c.images?.[0] || "";
+    const coverThumb = cover ? thumbUrl(cover) : "";
+    return `
       <div class="card row" onclick="openChapter(${c.id})" title="Open chapter">
-        ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(cover)}" alt="">` : `<div class="thumb"></div>`}
+        ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${coverThumb}" alt="">` : `<div class="thumb"></div>`}
         <div style="flex:1">
-          <div><strong>#${fmt(c.issue_num)} — ${c.title||"—"}</strong></div>
+          <div><strong>#${fmt(c.issue_num)} — ${c.title || "(untitled)"}</strong></div>
           <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
-          ${summary ? `<div class="meta clamp-2" style="margin-top:4px">${summary}</div>` : ``}
+          <div class="meta">${(c.summary||"").slice(0,120)}</div>
           <div class="meta">${(c.tags||[]).map(t=>`<span class="badge">${t}</span>`).join("")}</div>
         </div>
         ${state.isMember ? `<button class="kebab" onclick="event.stopPropagation(); editChapter(${c.id})">⋯</button>` : ``}
       </div>`;
-    }).join("");
-    html($("#feed"), out);
-  }
+  }).join("");
 
-  renderFiltered(list, $("#search").value || "");
-  searchEl.oninput = debounce(()=> renderFiltered(list, searchEl.value), 150);
+  html($("#feed"), out);
+
+  // живой поиск
+  qEl.oninput = debounce(()=> renderFeed(), 250);
 }
 
 function openChapter(id){ location.hash = `#/chapter/${id}`; }
@@ -493,46 +493,51 @@ async function openSeries(seriesId){
 async function renderTags(){
   show($("#view-tags"), true);
   html($("#tags"), `Loading…`);
-  const tags=await getTagsWithCounts();
-  html($("#tags"), tags.length ? tags.map(t=>`<button class="chip" data-tag="${t.name}">${t.name} (${t.count})</button>`).join("") : `<span class="muted">No tags yet</span>`);
+
+  const tags = await getTagsWithCounts();
+  const chips = tags.map(t=>`<button class="chip" data-tag="${t.name}">${t.name} (${t.count})</button>`).join("");
+  html($("#tags"), chips || `<span class="muted">No tags yet</span>`);
   $("#tags-info").textContent = "Tap tags to filter; tap again to unselect · Clear with Feed → Clear";
-  html($("#tag-feed"), ``);
 
-  const feed = await getFeed();
-  const active = new Set();
+  // сброс выборки при входе на страницу
+  state.tagFilter = [];
 
-  function renderByTags(){
-    const selected = [...active].map(s=>s.toLowerCase());
-    const filtered = selected.length
-      ? feed.filter(c=>{
-          const ct = (c.tags||[]).map(x=>x.toLowerCase());
-          return selected.every(t=> ct.includes(t));
-        })
-      : feed;
+  const renderTagFeed = async ()=>{
+    const feed = await getFeed();
+    const sel = state.tagFilter;
+    const filtered = sel.length ? feed.filter(c => sel.every(t => (c.tags||[]).includes(t))) : feed;
 
     const out = filtered.map(c=>{
       const cover = c.images?.[0] || "";
+      const coverThumb = cover ? thumbUrl(cover) : "";
       return `
-      <div class="card row" onclick="openChapter(${c.id})">
-        ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(cover)}" alt="">` : `<div class="thumb"></div>`}
-        <div style="flex:1">
-          <div><strong>#${fmt(c.issue_num)} — ${c.title||"—"}</strong></div>
-          <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
-          <div class="meta">${(c.tags||[]).map(t=>`<span class="badge">${t}</span>`).join("")}</div>
-        </div>
-      </div>`;
+        <div class="card row" onclick="openChapter(${c.id})">
+          ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${coverThumb}" alt="">` : `<div class="thumb"></div>`}
+          <div style="flex:1">
+            <div><strong>#${fmt(c.issue_num)} — ${c.title || "(untitled)"}</strong></div>
+            <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
+            <div class="meta">${(c.tags||[]).map(t=>`<span class="badge">${t}</span>`).join("")}</div>
+          </div>
+        </div>`;
     }).join("");
+
     html($("#tag-feed"), out || `<div class="card">No results</div>`);
-  }
+  };
 
   $$("#tags .chip").forEach(b=>{
     b.onclick = ()=>{
-      b.classList.toggle("active");
       const name = b.dataset.tag;
-      if(b.classList.contains("active")) active.add(name); else active.delete(name);
-      renderByTags();
+      b.classList.toggle("active");
+      if (b.classList.contains("active")) {
+        if (!state.tagFilter.includes(name)) state.tagFilter.push(name);
+      } else {
+        state.tagFilter = state.tagFilter.filter(x => x !== name);
+      }
+      renderTagFeed();
     };
   });
+
+  html($("#tag-feed"), ``);
 }
 
 /*** ====== CHAPTER VIEW ====== ***/
