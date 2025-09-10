@@ -10,8 +10,7 @@
   <script>
     if(!window.supabase){
       var s=document.createElement('script');
-
- s.src='https://unpkg.com/@supabase/supabase-js@2';
+      s.src='https://unpkg.com/@supabase/supabase-js@2';
       document.head.appendChild(s);
     }
   </script>
@@ -36,30 +35,30 @@
     .tab{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:var(--card);cursor:pointer}
     .tab.active{outline:2px solid var(--accent)}
     .right{display:flex;gap:8px;align-items:center}
-
     .btn,button{padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;box-shadow:var(--shadow)}
     .btn.accent{background:var(--accent);border-color:transparent;color:#061224}
     .btn.ghost{background:transparent}
-
-    .search{display:flex;gap:8px;flex-wrap:wrap}
-    .input{flex:1;min-width:180px;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--muted);color:var(--text)}
+    .input{flex:1;min-width:200px;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--muted);color:var(--text)}
     .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
     .chip{padding:6px 10px;border-radius:999px;background:var(--muted);border:1px solid var(--border);cursor:pointer}
     .chip.active{outline:2px solid var(--accent)}
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:720px){.grid{grid-template-columns:1fr 1fr}}
     .card{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);box-shadow:var(--shadow);padding:12px}
-    .row{display:flex;gap:10px;align-items:center}
+    .row{display:flex;gap:10px;align-items:flex-start}
     .thumb{width:96px;height:96px;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:#0b0d12}
     .meta{font-size:13px;color:var(--text-dim)}
     .kebab{margin-left:auto;background:transparent;border:1px solid var(--border);border-radius:10px;padding:6px;cursor:pointer}
     .hidden{display:none !important}
 
-    /* Header menu (⋯) */
+    /* Обрезка описания в ленте до 2 строк */
+    .clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+    /* Меню ⋯ */
     .menu{position:relative}
     .menu-btn{border:1px solid var(--border);background:var(--card);border-radius:999px;padding:8px 10px;cursor:pointer}
     .menu-btn:after{content:"⋯";font-size:18px;line-height:1}
-    .dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);min-width:160px;display:none;overflow:hidden}
+    .dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);min-width:200px;display:none;overflow:hidden}
     .menu.open .dropdown{display:block}
     .dd-item{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--text);padding:10px 12px;cursor:pointer}
     .dd-item:hover{background:var(--muted)}
@@ -98,20 +97,15 @@
 
     /* ===== Mobile tweaks ===== */
     @media(max-width: 520px){
-      .wrap{ padding: 10px; }
+      .wrap{ padding: 10px }
       .bar{ gap:8px; flex-wrap:wrap; padding:10px 12px }
       .brand h1{ font-size:18px }
       .tabs{ overflow-x:auto; -webkit-overflow-scrolling:touch; gap:6px }
       .tabs::-webkit-scrollbar{ display:none }
 
-      .search{ flex-direction:column }
-      .input{ width:100% }
-
       .grid{ grid-template-columns: 1fr }
-
       .card.row{ flex-direction:column; align-items:stretch }
       .thumb{ width:100%; height:180px }
-
       .card{ position:relative }
       .kebab{ position:absolute; top:8px; right:8px }
 
@@ -121,8 +115,6 @@
       .two{ grid-template-columns: 1fr }
       .pill{ width:100%; text-align:center }
 
-      .row{ flex-wrap:wrap }
-      .chip{ padding:10px 12px }
       .fab{ right:16px; bottom: calc(16px + env(safe-area-inset-bottom)); padding:16px 18px; font-size:20px }
     }
     @supports(padding:max(0px)){
@@ -142,11 +134,11 @@
         </nav>
       </div>
       <div class="right">
-        <span id="auth-status" class="muted">guest</span>
-        <!-- Меню ⋯ вместо кнопки Log in на виду -->
+        <!-- Меню ⋯: почта спрятана здесь -->
         <div class="menu" id="menu">
           <button class="menu-btn" id="menu-btn" aria-label="Menu"></button>
           <div class="dropdown" id="menu-dd" role="menu" aria-hidden="true">
+            <div class="muted" style="padding:10px 12px" id="auth-status-menu">guest</div>
             <button id="btn-login" class="dd-item">Log in</button>
             <button id="btn-logout" class="dd-item hidden">Log out</button>
           </div>
@@ -159,9 +151,8 @@
     <!-- FEED -->
     <section id="view-feed" class="hidden">
       <div class="search">
-        <input id="q" class="input" placeholder="Search title / series / tags / year…" />
-        <input id="year" class="input" placeholder="Year (e.g. 2023 or 2020-2024)" inputmode="numeric" pattern="[0-9\-]*" />
-        <input id="tag" class="input" placeholder="Tag (exact or part)" />
+        <input id="search" class="input" placeholder="Search (title / series / tag / year…)" autocomplete="off" />
+        <div id="suggest" class="chips"></div>
         <button id="btn-clear" class="btn ghost">Clear</button>
       </div>
       <div id="feed" class="grid" style="margin-top:12px"></div>
@@ -196,45 +187,48 @@
             <div class="field"><label>Series</label>
               <select id="ed-series" class="input"></select>
             </div>
-            <div class="field"><label>Year</label>
-              <input id="ed-year" class="input" type="number" min="1900" max="2100" inputmode="numeric" />
+            <div class="field"><label>Year (optional)</label>
+              <input id="ed-year" class="input" type="number" min="1900" max="2100" />
             </div>
           </div>
           <div class="two">
-            <div class="field"><label>Title</label>
+            <div class="field"><label>Title (optional)</label>
               <input id="ed-title-input" class="input" placeholder="e.g. The Court of Owls"/>
             </div>
-            <div class="field"><label>Number (#issue)</label>
-              <input id="ed-issue" class="input" type="number" min="0" inputmode="numeric" />
+            <div class="field"><label>Number (#issue, optional)</label>
+              <input id="ed-issue" class="input" type="number" min="0" />
             </div>
           </div>
-          <div class="field"><label>Summary</label>
+          <div class="field"><label>Summary (optional)</label>
             <textarea id="ed-summary" class="input" rows="4" placeholder="Short notes"></textarea>
           </div>
           <div class="two">
-            <div class="field"><label>Link A</label>
-              <input id="ed-link-a" class="input" placeholder="https://…" inputmode="url"/>
+            <div class="field"><label>Link A (optional)</label>
+              <input id="ed-link-a" class="input" placeholder="https://…"/>
             </div>
-            <div class="field"><label>Link B</label>
-              <input id="ed-link-b" class="input" placeholder="https://…" inputmode="url"/>
+            <div class="field"><label>Link B (optional)</label>
+              <input id="ed-link-b" class="input" placeholder="https://…"/>
             </div>
           </div>
-          <div class="field"><label>Tags (comma-separated)</label>
+          <div class="field">
+            <label>Tags (comma-separated, optional)</label>
             <input id="ed-tags" class="input" placeholder="batman, detective, night"/>
+            <div id="tag-suggest" class="chips"></div>
           </div>
 
           <div class="field">
             <label>Images</label>
             <div class="urls">
-              <input id="ed-image-urls" class="input" placeholder="Paste image URLs, comma-separated (https://…)" inputmode="url" />
+              <input id="ed-image-urls" class="input" placeholder="Paste image URLs, comma-separated" />
               <label class="pill">
-                <input id="ed-file" type="file" accept="image/*" capture="environment" multiple hidden />
+                <!-- без accept / capture => откроется файловый менеджер -->
+                <input id="ed-file" type="file" multiple hidden />
                 Upload from device
               </label>
             </div>
             <div id="ed-previews" class="gallery"></div>
             <div class="muted" style="font-size:12px;margin-top:4px">
-              При загрузке с устройства создаются миниатюры для быстрой ленты.
+              If thumbnails are enabled, small copies are created for fast feed.
             </div>
           </div>
 
@@ -258,7 +252,7 @@
   <div id="auth-modal" class="modal" aria-hidden="true">
     <div class="box">
       <h3>Log in (email & password)</h3>
-      <p class="muted">Только авторизованные «участники» могут редактировать и загружать картинки.</p>
+      <p class="muted">Редактировать может только владелец.</p>
       <div class="form" style="margin-top:8px">
         <div class="field"><label>Email</label><input id="login-email" class="input" placeholder="you@example.com"></div>
         <div class="field"><label>Password</label><input id="login-pass" class="input" type="password" placeholder="••••••••"></div>
@@ -275,32 +269,15 @@
 
 <script>
 /*** ====== CONFIG ====== ***/
-const SUPABASE_URL = "https://miyyoppwehfitpftqjlh.supabase.co";   // ← замени
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1peXlvcHB3ZWhmaXRwZnRxamxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczOTEwMjAsImV4cCI6MjA3Mjk2NzAyMH0.Z3PZAfK5chLvNns8YvwUA5ODaAy_YOogj5-K8yBh5LY";                 // ← замени
+const SUPABASE_URL = "https://miyyoppwehfitpftqjlh.supabase.co";  // твой URL
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1peXlvcHB3ZWhmaXRwZnRxamxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczOTEwMjAsImV4cCI6MjA3Mjk2NzAyMH0.Z3PZAfK5chLvNns8YvwUA5ODaAy_YOogj5-K8yBh5LY"; // твой ANON KEY
 const BUCKET = "images";
-const USE_THUMBS = true; // ← поставь false, если не хочешь хранить миниатюры
+const USE_THUMBS = true; // миниатюры в Storage
 
-let supabase;
-try{
-  if(!window.supabase || !window.supabase.createClient){
-    throw new Error("Supabase SDK didn't load");
-  }
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  window.__sb = supabase;
-}catch(e){
-  window.__sb = supabase;
-  console.error(e);
-  alert("Не загрузилась библиотека Supabase. Проверь интернет/блокировщики и обнови страницу.");
-  supabase = {
-    auth: {
-      getUser: async ()=>({ data:{ user:null } }),
-      signInWithPassword: async ()=>{ throw new Error("Supabase SDK missing"); },
-      signOut: async ()=>({}),
-    },
-    from(){ return { select: async()=>{ throw new Error("Supabase SDK missing"); } }; },
-    storage:{ from(){ return { upload: async()=>({ error:{ message:"Supabase SDK missing" } }), getPublicUrl: ()=>({ data:{ publicUrl:"" } }) }; } },
-  };
-}
+const OWNER_UID = "1c11591d-a27c-4023-adec-f1aeeace822c"; // только этот UID редактирует
+
+// init supabase
+let supabase = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /*** ====== STATE ====== ***/
 const state = { user:null, isMember:false, route:"#/feed", undo:null, tagFilter:[] };
@@ -320,22 +297,15 @@ function toast(message, onUndo){
 }
 
 /*** ====== AUTH ====== ***/
-
-const OWNER_UID = "1c11591d-a27c-4023-adec-f1aeeace822c";
-
 async function refreshAuth(){
   const { data:{ user } } = await supabase.auth.getUser();
   state.user = user;
-
-  $("#auth-status").textContent = user ? (user.email || "user") : "guest";
+  $("#auth-status-menu").textContent = user ? (user.email || "user") : "guest";
   show($("#btn-login"), !user);
   show($("#btn-logout"), !!user);
-  show($("#fab"), !!user);
-
-  // Разрешаем редактирование только твоему UID
-  state.isMember = !!user && user.id === OWNER_UID;
+  show($("#fab"), !!user && user.id===OWNER_UID);
+  state.isMember = !!user && user.id===OWNER_UID;
 }
-
 function openAuth(){ const m=$("#auth-modal"); m.style.display="flex"; m.setAttribute("aria-hidden","false"); }
 function closeAuth(){ const m=$("#auth-modal"); m.style.display="none"; m.setAttribute("aria-hidden","true"); }
 
@@ -368,7 +338,8 @@ document.addEventListener("click", (e)=>{
 /*** ====== ROUTER ====== ***/
 window.addEventListener("hashchange", ()=> routeTo(location.hash || "#/feed"));
 function routeTo(hash){
-  state.route = hash || "#/feed"; setTabs();
+  state.route = hash || "#/feed";
+  setTabs();
   ["#view-feed","#view-series","#view-tags","#view-chapter","#view-editor"].forEach(id=> show($(id),false));
   if(hash.startsWith("#/feed")) renderFeed();
   else if(hash.startsWith("#/series")) renderSeries();
@@ -387,10 +358,10 @@ async function getSeries(){
   return (data||[]).map(s=> ({...s, count: map[s.id]||0}));
 }
 async function getTagsWithCounts(){
-  const { data: rel } = await supabase.from("chapter_tags").select("chapter_id, tags:id:tag_id(name)");
-  const counts={};
-  (rel||[]).forEach(r=>{ const t=r.tags; if(t) counts[t.name]=(counts[t.name]||0)+1; });
-  return Object.entries(counts).map(([name,count])=>({name,count})).sort((a,b)=> b.count-a.count);
+  const { data: tags } = await supabase.from("tags").select("id,name").order("name");
+  const { data: rel }  = await supabase.from("chapter_tags").select("tag_id");
+  const map={}; (rel||[]).forEach(r=> map[r.tag_id]=(map[r.tag_id]||0)+1);
+  return (tags||[]).map(t=>({id:t.id,name:t.name,count:map[t.id]||0})).sort((a,b)=>b.count-a.count);
 }
 async function getFeed(){
   const { data: chapters } = await supabase
@@ -422,49 +393,72 @@ function thumbUrl(url){
   }catch(_){ return url; }
 }
 
-/*** ====== RENDER: FEED ====== ***/
+/*** ====== FEED: единый поиск + подсказки ====== ***/
 async function renderFeed(){
-  show($("#view-feed"), true); html($("#feed"), `<div class="card">Loading…</div>`);
-  const qEl=$("#q"), yEl=$("#year"), tEl=$("#tag");
-  $("#btn-clear").onclick = ()=>{ qEl.value=""; yEl.value=""; tEl.value=""; renderFeed(); };
+  show($("#view-feed"), true);
+  html($("#feed"), `<div class="card">Loading…</div>`);
 
-  const list=await getFeed();
-  const q=qEl.value.trim().toLowerCase(), year=yEl.value.trim(), tag=tEl.value.trim().toLowerCase();
-  const filtered=list.filter(c=>{
-    const base=`${c.title} ${c.series?.title||""} ${c.tags.join(" ")} ${c.year||""}`.toLowerCase();
-    let ok=!q||base.includes(q);
-    if(ok && year){
-      if(year.includes("-")){ const [a,b]=year.split("-").map(n=>parseInt(n,10)); ok=c.year && c.year>=a && c.year<=b; }
-      else ok=c.year && c.year==parseInt(year,10);
+  const list = await getFeed();
+  const searchEl = $("#search");
+  const suggestEl = $("#suggest");
+  $("#btn-clear").onclick = ()=>{ searchEl.value=""; renderFiltered(list,""); };
+
+  function makeSuggestions(q){
+    const s = q.trim().toLowerCase();
+    if(!s){ suggestEl.innerHTML=""; return; }
+    const years = new Set(), titles = new Set(), tags = new Set();
+    for(const c of list){
+      if(String(c.year||"").startsWith(s)) years.add(String(c.year));
+      if((c.title||"").toLowerCase().startsWith(s)) titles.add(c.title);
+      if((c.series?.title||"").toLowerCase().startsWith(s)) titles.add(c.series.title);
+      for(const t of (c.tags||[])) if(t.toLowerCase().startsWith(s)) tags.add("#"+t);
+      if(years.size>5 && titles.size>5 && tags.size>5) break;
     }
-    if(ok && tag) ok=c.tags.some(t=> t.toLowerCase().includes(tag));
-    return ok;
-  });
+    const chips = [...years].slice(0,6).map(x=>`<button class="chip" data-fill="${x}">${x}</button>`)
+      .concat([...titles].slice(0,6).map(x=>`<button class="chip" data-fill="${x}">${x}</button>`))
+      .concat([...tags].slice(0,6).map(x=>`<button class="chip" data-fill="${x}">${x}</button>`))
+      .join("");
+    suggestEl.innerHTML = chips;
+    $$("#suggest .chip").forEach(b=> b.onclick = ()=>{ searchEl.value=b.dataset.fill.replace(/^#/,""); renderFiltered(list, searchEl.value); });
+  }
 
-  if(filtered.length===0){ html($("#feed"), `<div class="card">No results</div>`); return; }
+  function renderFiltered(items, q){
+    q = (q||"").trim().toLowerCase();
+    makeSuggestions(q);
+    const filtered = items.filter(c=>{
+      const base = `${c.title||""} ${c.series?.title||""} ${(c.tags||[]).join(" ")} ${c.year||""}`.toLowerCase();
+      return !q || base.includes(q);
+    });
+    if(filtered.length===0){ html($("#feed"), `<div class="card">No results</div>`); return; }
 
-  const out=filtered.map(c=>{
-    const cover=c.images?.[0]||""; const coverThumb=cover? thumbUrl(cover):"";
-    return `
+    const out = filtered.map(c=>{
+      const cover = c.images?.[0] || "";
+      const summary = c.summary ? escapeHtml(c.summary) : "";
+      return `
       <div class="card row" onclick="openChapter(${c.id})" title="Open chapter">
-        ${cover ? `<img class="thumb" loading="lazy" src="${coverThumb}" alt="">` : `<div class="thumb"></div>`}
+        ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(cover)}" alt="">` : `<div class="thumb"></div>`}
         <div style="flex:1">
-          <div><strong>#${fmt(c.issue_num)} — ${c.title}</strong></div>
+          <div><strong>#${fmt(c.issue_num)} — ${c.title||"—"}</strong></div>
           <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
-          <div class="meta">${c.tags.map(t=>`<span class="badge">${t}</span>`).join("")}</div>
+          ${summary ? `<div class="meta clamp-2" style="margin-top:4px">${summary}</div>` : ``}
+          <div class="meta">${(c.tags||[]).map(t=>`<span class="badge">${t}</span>`).join("")}</div>
         </div>
         ${state.isMember ? `<button class="kebab" onclick="event.stopPropagation(); editChapter(${c.id})">⋯</button>` : ``}
       </div>`;
-  }).join("");
-  html($("#feed"), out);
-  [qEl,yEl,tEl].forEach(inp => inp.oninput = debounce(()=> renderFeed(), 250));
+    }).join("");
+    html($("#feed"), out);
+  }
+
+  renderFiltered(list, $("#search").value || "");
+  searchEl.oninput = debounce(()=> renderFiltered(list, searchEl.value), 150);
 }
 function openChapter(id){ location.hash = `#/chapter/${id}`; }
 function editChapter(id){ location.hash = `#/edit/${id}`; }
 
-/*** ====== RENDER: SERIES ====== ***/
+/*** ====== SERIES ====== ***/
 async function renderSeries(){
-  show($("#view-series"), true); html($("#series"), `<div class="card">Loading…</div>`);
+  show($("#view-series"), true);
+  html($("#series"), `<div class="card">Loading…</div>`);
   const data=await getSeries();
   const out=(data||[]).map(s=>`
     <div class="card row" onclick="openSeries(${s.id})">
@@ -476,7 +470,7 @@ async function renderSeries(){
   const addBtn=$("#series-add");
   if(addBtn){
     addBtn.onclick = async ()=>{
-      if(!state.isMember) return alert("Login as a member to edit.");
+      if(!state.isMember) return alert("Login as owner to edit.");
       const name=prompt("Series title:"); if(!name) return;
       const { error } = await supabase.from("series").insert({ title:name.trim() });
       if(error) return alert(error.message);
@@ -487,69 +481,75 @@ async function renderSeries(){
 async function openSeries(seriesId){
   const { data: name } = await supabase.from("series").select("title").eq("id", seriesId).single();
   show($("#view-feed"), true); show($("#view-series"), false); show($("#view-tags"), false);
-  $("#q").value = name?.title || ""; renderFeed();
+  $("#search").value = name?.title || ""; renderFeed();
 }
 
-/*** ====== RENDER: TAGS ====== ***/
+/*** ====== TAGS ====== ***/
 async function renderTags(){
-  show($("#view-tags"), true); html($("#tags"), `Loading…`);
+  show($("#view-tags"), true);
+  html($("#tags"), `Loading…`);
   const tags=await getTagsWithCounts();
-  const chips=tags.map(t=>`<button class="chip" data-tag="${t.name}">${t.name} (${t.count})</button>`).join("");
-  html($("#tags"), chips || `<span class="muted">No tags yet</span>`);
+  html($("#tags"), tags.length ? tags.map(t=>`<button class="chip" data-tag="${t.name}">${t.name} (${t.count})</button>`).join("") : `<span class="muted">No tags yet</span>`);
   $("#tags-info").textContent = "Tap tags to filter; tap again to unselect · Clear with Feed → Clear";
+  html($("#tag-feed"), ``);
+
+  const feed = await getFeed();
+  const active = new Set();
+
+  function renderByTags(){
+    const selected = [...active];
+    const filtered = selected.length ? feed.filter(c=> selected.every(t=> (c.tags||[]).includes(t))) : feed;
+    const out = filtered.map(c=>{
+      const cover = c.images?.[0] || "";
+      return `
+      <div class="card row" onclick="openChapter(${c.id})">
+        ${cover ? `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(cover)}">` : `<div class="thumb"></div>`}
+        <div style="flex:1">
+          <div><strong>#${fmt(c.issue_num)} — ${c.title||"—"}</strong></div>
+          <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
+          <div class="meta">${(c.tags||[]).map(t=>`<span class="badge">${t}</span>`).join("")}</div>
+        </div>
+      </div>`;
+    }).join("");
+    html($("#tag-feed"), out || `<div class="card">No results</div>`);
+  }
 
   $$("#tags .chip").forEach(b=>{
-    b.onclick = async ()=>{
-      const name=b.dataset.tag; b.classList.toggle("active");
-      if(b.classList.contains("active")) state.tagFilter.push(name);
-      else state.tagFilter=state.tagFilter.filter(x=>x!==name);
-
-      const feed=await getFeed(); const selected=state.tagFilter.slice();
-      const filtered=selected.length ? feed.filter(c=> selected.every(t=> c.tags.includes(t))) : feed;
-      const out=(filtered.length? filtered:[]).map(c=>{
-        const cover=c.images?.[0]||""; const coverThumb=cover?thumbUrl(cover):"";
-        return `
-        <div class="card row" onclick="openChapter(${c.id})">
-          ${cover ? `<img class="thumb" loading="lazy" src="${coverThumb}" alt="">` : `<div class="thumb"></div>`}
-          <div style="flex:1">
-            <div><strong>#${fmt(c.issue_num)} — ${c.title}</strong></div>
-            <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
-            <div class="meta">${c.tags.map(t=>`<span class="badge">${t}</span>`).join("")}</div>
-          </div>
-        </div>`;
-      }).join("");
-      html($("#tag-feed"), out || `<div class="card">No results</div>`);
+    b.onclick = ()=>{
+      b.classList.toggle("active");
+      const name = b.dataset.tag;
+      if(b.classList.contains("active")) active.add(name); else active.delete(name);
+      renderByTags();
     };
   });
-  html($("#tag-feed"), ``);
 }
 
-/*** ====== RENDER: CHAPTER ====== ***/
+/*** ====== CHAPTER VIEW ====== ***/
 async function renderChapter(id){
-  show($("#view-chapter"), true); const box=$("#chapter-box"); html(box, `Loading…`);
+  show($("#view-chapter"), true);
+  const box=$("#chapter-box");
+  html(box, `Loading…`);
   try{
     const c=await getChapterById(id);
     let prev=null, next=null;
     if(c.series_id!=null && c.issue_num!=null){
-      const { data: siblings } = await supabase.from("chapters")
-        .select("id,issue_num").eq("series_id", c.series_id).order("issue_num");
+      const { data: siblings } = await supabase.from("chapters").select("id,issue_num").eq("series_id", c.series_id).order("issue_num");
       const idx=(siblings||[]).findIndex(s=> s.id===id); prev=siblings?.[idx-1]?.id||null; next=siblings?.[idx+1]?.id||null;
     }
     const links = `
       ${c.link_a? `<a class="btn" target="_blank" href="${c.link_a}">Link A</a>`:``}
       ${c.link_b? `<a class="btn" target="_blank" href="${c.link_b}">Link B</a>`:``}
     `;
-    const imgs=(c.images||[]);
     html(box, `
       <div class="row" style="gap:12px;align-items:flex-start">
         <div style="flex:1">
-          <h2>#${fmt(c.issue_num)} — ${c.title}</h2>
+          <h2>#${fmt(c.issue_num)} — ${c.title||"—"}</h2>
           <div class="meta">${c.series?.title||"—"} • ${fmt(c.year)}</div>
           <div style="margin:8px 0">${links}</div>
           <p>${c.summary ? escapeHtml(c.summary).replace(/\n/g,"<br>") : "<span class='muted'>No summary</span>"}</p>
           <div>${(c.tags||[]).map(t=> `<span class="badge">${t}</span>`).join("")}</div>
           <div class="gallery">
-            ${imgs.map(u=> `<img class="gal-img" loading="lazy" src="${thumbUrl(u)}" alt="" onclick="openLightbox('${u}')">`).join("")}
+            ${(c.images||[]).map(u=> `<img class="gal-img" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(u)}" alt="" onclick="openLightbox('${u}')">`).join("")}
           </div>
           <div class="row" style="gap:8px;margin-top:8px">
             ${prev? `<button class="btn" onclick="openChapter(${prev})">← Prev</button>`:``}
@@ -568,23 +568,26 @@ $("#lightbox").onclick = ()=> $("#lightbox").classList.remove("show");
 /*** ====== EDITOR ====== ***/
 $("#fab").onclick = ()=> location.hash = "#/edit";
 async function renderEditor(id){
-  if(!state.isMember){ alert("Login as a member to edit."); routeTo("#/feed"); return; }
+  if(!state.isMember){ alert("Login as owner to edit."); routeTo("#/feed"); return; }
   show($("#view-editor"), true);
   $("#ed-title").textContent=id? "Edit chapter" : "New chapter";
   show($("#ed-delete"), !!id);
 
+  // series select (+ создать новую)
   const series=await getSeries();
-  const options=series.map(s=> `<option value="${s.id}">${s.title}</option>`).join("") + `<option value="__new__">＋ New series…</option>`;
+  const options = `<option value="">— select —</option>` +
+    series.map(s=> `<option value="${s.id}">${s.title}</option>`).join("") +
+    `<option value="_new">＋ New series…</option>`;
   html($("#ed-series"), options);
-
-  $("#ed-series").onchange = async (ev)=>{
-    if(ev.target.value==="__new__"){
-      const name=prompt("Series title:"); if(!name){ ev.target.value=series[0]?.id||""; return; }
+  $("#ed-series").onchange = async ()=>{
+    if($("#ed-series").value === "_new"){
+      const name = prompt("New series title:");
+      if(!name){ $("#ed-series").value=""; return; }
       const { data, error } = await supabase.from("series").insert({ title:name.trim() }).select().single();
-      if(error){ alert(error.message); ev.target.value=series[0]?.id||""; return; }
-      const upd=await getSeries();
-      html($("#ed-series"), upd.map(s=> `<option value="${s.id}">${s.title}</option>`).join("") + `<option value="__new__">＋ New series…</option>`);
-      $("#ed-series").value=data.id;
+      if(error){ alert(error.message); $("#ed-series").value=""; return; }
+      const s2 = await getSeries();
+      html($("#ed-series"), `<option value="">— select —</option>` + s2.map(s=> `<option value="${s.id}">${s.title}</option>`).join("") + `<option value="_new">＋ New series…</option>`);
+      $("#ed-series").value = data.id;
     }
   };
 
@@ -592,6 +595,21 @@ async function renderEditor(id){
   $("#ed-title-input").value=""; $("#ed-issue").value=""; $("#ed-year").value="";
   $("#ed-summary").value=""; $("#ed-link-a").value=""; $("#ed-link-b").value="";
   $("#ed-tags").value=""; $("#ed-image-urls").value=""; html($("#ed-previews"),"");
+
+  // tag suggestions (топ-30)
+  const tagList = await getTagsWithCounts();
+  const topTags = tagList.slice(0,30).map(t=>t.name);
+  html($("#tag-suggest"), topTags.map(n=>`<button class="chip" data-name="${n}">#${n}</button>`).join(""));
+  $$("#tag-suggest .chip").forEach(b=>{
+    b.onclick = ()=>{
+      const name = b.dataset.name;
+      const inp = $("#ed-tags");
+      const cur = inp.value.trim();
+      const list = cur ? cur.split(",").map(s=>s.trim()).filter(Boolean) : [];
+      if(!list.includes(name)) list.push(name);
+      inp.value = list.join(", ");
+    };
+  });
 
   let existing=null;
   if(id){
@@ -610,8 +628,11 @@ async function renderEditor(id){
   $("#ed-file").onchange = async (ev)=>{
     const files=Array.from(ev.target.files||[]);
     for(const f of files){
-      const { originalUrl } = await uploadImageWithThumb(f);
-      addPreview(originalUrl);
+      if(!f.type.startsWith("image/")) continue;
+      try{
+        const { originalUrl } = await uploadImageWithThumb(f);
+        addPreview(originalUrl);
+      }catch(e){ alert("Upload error: "+(e.message||e)); }
     }
     ev.target.value="";
   };
@@ -624,7 +645,7 @@ async function renderEditor(id){
   $("#ed-save").onclick = async ()=>{
     const payload={
       series_id: Number($("#ed-series").value),
-      title: $("#ed-title-input").value.trim(),
+      title: $("#ed-title-input").value.trim() || null,
       issue_num: $("#ed-issue").value ? Number($("#ed-issue").value) : null,
       year: $("#ed-year").value ? Number($("#ed-year").value) : null,
       summary: $("#ed-summary").value.trim() || null,
@@ -633,33 +654,34 @@ async function renderEditor(id){
       images: $$("#ed-previews img").map(img=> img.dataset.original || img.src),
     };
     const tags=$("#ed-tags").value.split(",").map(s=> s.trim()).filter(Boolean);
-    if(!payload.title) return alert("Title is required");
-    if(!payload.series_id) return alert("Select series");
+    if(!payload.series_id){ alert("Select series"); return; }
 
-    if(id){
-      const before=existing;
-      const { error } = await supabase.from("chapters").update(payload).eq("id", id);
-      if(error){ alert(error.message); return; }
-      await upsertTagsForChapter(id, tags);
-      toast("Saved. Undo?", async ()=>{
-        await supabase.from("chapters").update({
-          series_id:before.series_id,title:before.title,issue_num:before.issue_num,year:before.year,
-          summary:before.summary,link_a:before.link_a,link_b:before.link_b,images:before.images
-        }).eq("id", id);
-        await upsertTagsForChapter(id, before.tags||[]); renderChapter(id);
-      });
-      openChapter(id);
-    }else{
-      const { data, error } = await supabase.from("chapters").insert(payload).select().single();
-      if(error){ alert(error.message); return; }
-      await upsertTagsForChapter(data.id, tags);
-      toast("Created. Undo?", async ()=>{
-        await supabase.from("chapter_tags").delete().eq("chapter_id", data.id);
-        await supabase.from("chapters").delete().eq("id", data.id);
-        routeTo("#/feed");
-      });
-      openChapter(data.id);
-    }
+    try{
+      if(id){
+        const before=existing;
+        const { error } = await supabase.from("chapters").update(payload).eq("id", id);
+        if(error) throw error;
+        await upsertTagsForChapter(id, tags);
+        toast("Saved. Undo?", async ()=>{
+          await supabase.from("chapters").update({
+            series_id:before.series_id,title:before.title,issue_num:before.issue_num,year:before.year,
+            summary:before.summary,link_a:before.link_a,link_b:before.link_b,images:before.images
+          }).eq("id", id);
+          await upsertTagsForChapter(id, before.tags||[]); renderChapter(id);
+        });
+        openChapter(id);
+      }else{
+        const { data, error } = await supabase.from("chapters").insert(payload).select().single();
+        if(error) throw error;
+        await upsertTagsForChapter(data.id, tags);
+        toast("Created. Undo?", async ()=>{
+          await supabase.from("chapter_tags").delete().eq("chapter_id", data.id);
+          await supabase.from("chapters").delete().eq("id", data.id);
+          routeTo("#/feed");
+        });
+        openChapter(data.id);
+      }
+    }catch(e){ alert(e.message||e); }
   };
 
   $("#ed-close").onclick = ()=> history.back();
@@ -681,7 +703,9 @@ async function renderEditor(id){
 }
 function addPreview(url){
   const wrap=document.createElement("div"); wrap.style.position="relative";
-  const img=document.createElement("img"); img.src=thumbUrl(url); img.dataset.original=url; img.className="thumb-sm";
+  const img=document.createElement("img");
+  img.src=thumbUrl(url); img.dataset.original=url; img.className="thumb-sm";
+  img.loading="lazy"; img.referrerPolicy="no-referrer";
   const rm=document.createElement("button"); rm.textContent="×"; rm.title="Remove";
   rm.style.position="absolute"; rm.style.top="-6px"; rm.style.right="-6px";
   rm.style.border="1px solid var(--border)"; rm.style.background="var(--warn)"; rm.style.color="#061224";
@@ -703,7 +727,7 @@ async function upsertTagsForChapter(chapterId, tags){
   }
 }
 
-/*** ====== IMAGE UPLOAD WITH THUMB ====== ***/
+/*** ====== IMAGE UPLOAD (с миниатюрой) ====== ***/
 async function downscaleImage(file, maxSide=2000, mime='image/jpeg', quality=0.9){
   const url=URL.createObjectURL(file);
   const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
@@ -711,7 +735,7 @@ async function downscaleImage(file, maxSide=2000, mime='image/jpeg', quality=0.9
   const canvas=document.createElement('canvas'); canvas.width=Math.round(img.width*ratio); canvas.height=Math.round(img.height*ratio);
   const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height);
   const blob=await new Promise(res=> canvas.toBlob(res, mime, quality)); URL.revokeObjectURL(url);
-  return new File([blob], (file.name.replace(/\.(png|jpe?g|webp|heic|heif)$/i,'')||'image')+'.jpg', { type:mime });
+  return new File([blob], (file.name.replace(/\.[^.]+$/,'')||'image')+'.jpg', { type:mime });
 }
 async function makeThumb(file, maxSide=480, mime='image/jpeg', quality=0.85){ return downscaleImage(file, maxSide, mime, quality); }
 function safeName(name){ return name.replace(/[^a-z0-9_.-]/gi,'_'); }
@@ -720,20 +744,20 @@ function pathJoin(...a){ return a.join('/').replace(/\/+/g,'/'); }
 async function uploadImageWithThumb(file){
   const prepared = file.size>1_200_000 ? await downscaleImage(file, 2000, 'image/jpeg', 0.9) : file;
   if(!USE_THUMBS){
-    const y=new Date().getFullYear(); const base=Date.now()+"_"+safeName(prepared.name.replace(/\.[^.]+$/,''));
-    const origPath=pathJoin(String(y), base+".jpg");
-    const up=await supabase.storage.from(BUCKET).upload(origPath, prepared, { upsert:true, contentType:prepared.type||'image/jpeg' });
+    const y=new Date().getFullYear(); const base=Date.now()+"_"+safeName(prepared.name.replace(/\.[^.]+$/,'')); const origPath=pathJoin(String(y), base+".jpg");
+    const up=await supabase.storage.from(BUCKET).upload(origPath, prepared, { upsert:false, contentType:prepared.type||'image/jpeg' });
     if(up.error){ alert(up.error.message); throw up.error; }
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(origPath);
     return { originalUrl: pub.publicUrl, thumbUrl: pub.publicUrl };
   }
   const thumb = await makeThumb(file, 480, 'image/jpeg', 0.85);
-  const y=new Date().getFullYear(); const base=Date.now()+"_"+safeName(prepared.name.replace(/\.[^.]+$/,''));
+  const y=new Date().getFullYear(); const base=Date.now()+"_"+safeName(prepared.name.replace(/\.[^.]+$/,'')); 
   const origPath=pathJoin(String(y), base+".jpg"); const thumbPath=pathJoin(String(y), base+"_thumb.jpg");
 
-  const up1=await supabase.storage.from(BUCKET).upload(origPath, prepared, { upsert:true, contentType:prepared.type||'image/jpeg' });
+  // upsert:false — чтобы не ловить конфликт и странный stack depth
+  const up1=await supabase.storage.from(BUCKET).upload(origPath, prepared, { upsert:false, contentType:prepared.type||'image/jpeg' });
   if(up1.error){ alert(up1.error.message); throw up1.error; }
-  const up2=await supabase.storage.from(BUCKET).upload(thumbPath, thumb, { upsert:true, contentType:thumb.type||'image/jpeg' });
+  const up2=await supabase.storage.from(BUCKET).upload(thumbPath, thumb, { upsert:false, contentType:thumb.type||'image/jpeg' });
   if(up2.error){ alert(up2.error.message); throw up2.error; }
 
   const { data: pub1 } = supabase.storage.from(BUCKET).getPublicUrl(origPath);
@@ -743,7 +767,7 @@ async function uploadImageWithThumb(file){
 
 /*** ====== ACTIONS ====== ***/
 async function deleteChapter(id){
-  if(!state.isMember){ alert("Login as a member to delete."); return; }
+  if(!state.isMember){ alert("Login as owner to delete."); return; }
   if(!confirm("Delete this chapter?")) return;
   const backup=await getChapterById(id);
   await supabase.from("chapter_tags").delete().eq("chapter_id", id);
@@ -766,7 +790,7 @@ function escapeHtml(s){ return s.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt
 /*** ====== INIT ====== ***/
 $$(".tab").forEach(b=> b.onclick = ()=> location.hash = b.dataset.route);
 (async function init(){
-  try{ await refreshAuth(); }catch(e){ console.error(e); }
+  await refreshAuth();
   routeTo(location.hash || "#/feed");
 })();
 </script>
