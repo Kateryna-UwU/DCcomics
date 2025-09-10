@@ -456,6 +456,7 @@ async function renderFeed(){
   renderFiltered(list, $("#search").value || "");
   searchEl.oninput = debounce(()=> renderFiltered(list, searchEl.value), 150);
 }
+
 function openChapter(id){ location.hash = `#/chapter/${id}`; }
 function editChapter(id){ location.hash = `#/edit/${id}`; }
 
@@ -716,12 +717,18 @@ function addPreview(url){
   const img=document.createElement("img");
   img.src=thumbUrl(url); img.dataset.original=url; img.className="thumb-sm";
   img.loading="lazy"; img.referrerPolicy="no-referrer";
+  img.onerror = ()=>{ // если миниатюра/хост не отдал — пробуем оригинал
+    if(img.src !== img.dataset.original) img.src = img.dataset.original;
+  };
   const rm=document.createElement("button"); rm.textContent="×"; rm.title="Remove";
   rm.style.position="absolute"; rm.style.top="-6px"; rm.style.right="-6px";
   rm.style.border="1px solid var(--border)"; rm.style.background="var(--warn)"; rm.style.color="#061224";
   rm.style.borderRadius="999px"; rm.style.cursor="pointer"; rm.style.width="22px"; rm.style.height="22px";
-  rm.onclick=()=> wrap.remove(); wrap.append(img, rm); $("#ed-previews").appendChild(wrap);
+  rm.onclick=()=> wrap.remove();
+  wrap.append(img, rm);
+  $("#ed-previews").appendChild(wrap);
 }
+
 
 /*** ====== TAGS UPSERT ====== ***/
 async function upsertTagsForChapter(chapterId, tags){
