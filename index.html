@@ -286,7 +286,9 @@ try{
     throw new Error("Supabase SDK didn't load");
   }
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.__sb = supabase;
 }catch(e){
+  window.__sb = supabase;
   console.error(e);
   alert("Не загрузилась библиотека Supabase. Проверь интернет/блокировщики и обнови страницу.");
   supabase = {
