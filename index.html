@@ -645,7 +645,7 @@ async function renderEditor(id){
   $("#ed-save").onclick = async ()=>{
     const payload={
       series_id: Number($("#ed-series").value),
-      title: $("#ed-title-input").value.trim() || null,
+      title: $("#ed-title-input").value.trim() || "(untitled)",
       issue_num: $("#ed-issue").value ? Number($("#ed-issue").value) : null,
       year: $("#ed-year").value ? Number($("#ed-year").value) : null,
       summary: $("#ed-summary").value.trim() || null,
