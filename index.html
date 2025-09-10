@@ -559,9 +559,22 @@ async function renderChapter(id){
           <div style="margin:8px 0">${links}</div>
           <p>${c.summary ? escapeHtml(c.summary).replace(/\n/g,"<br>") : "<span class='muted'>No summary</span>"}</p>
           <div>${(c.tags||[]).map(t=> `<span class="badge">${t}</span>`).join("")}</div>
+
           <div class="gallery">
-            ${(c.images||[]).map(u=> `<img class="gal-img" loading="lazy" referrerpolicy="no-referrer" src="${thumbUrl(u)}" alt="" onclick="openLightbox('${u}')">`).join("")}
+            ${(c.images||[]).map(u=> `
+              <img
+                class="gal-img"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+                src="${thumbUrl(u)}"
+                data-original="${u}"
+                alt=""
+                onclick="openLightbox('${u}')"
+                onerror="if(this.src!==this.dataset.original){ this.src=this.dataset.original; }"
+              >
+            `).join("")}
           </div>
+
           <div class="row" style="gap:8px;margin-top:8px">
             ${prev? `<button class="btn" onclick="openChapter(${prev})">← Prev</button>`:``}
             ${next? `<button class="btn" onclick="openChapter(${next})">Next →</button>`:``}
@@ -571,10 +584,10 @@ async function renderChapter(id){
         </div>
       </div>
     `);
-  }catch(e){ html(box, `<div class="card">Error: ${e.message}</div>`); }
+  }catch(e){
+    html(box, `<div class="card">Error: ${e.message}</div>`);
+  }
 }
-function openLightbox(src){ const lb=$("#lightbox"); lb.querySelector("img").src=src; lb.classList.add("show"); }
-$("#lightbox").onclick = ()=> $("#lightbox").classList.remove("show");
 
 /*** ====== EDITOR ====== ***/
 $("#fab").onclick = ()=> location.hash = "#/edit";
